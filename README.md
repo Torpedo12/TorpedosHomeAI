@@ -224,7 +224,6 @@ Unauthorized commercial use, redistribution, or reproduction of this project is 
 **Arth Patel (Torpedo)**
 
 Cybersecurity Student
-Saskatchewan Polytechnic
 
 ---
 
