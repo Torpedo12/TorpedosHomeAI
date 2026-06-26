@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ device.name }} - Device Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <main class="page">
+
+        <section class="hero">
+            <div>
+                <div class="badge">
+                    <span class="pulse"></span>
+                    Device Security Profile
+                </div>
+
+                <h1>{{ device.name }}</h1>
+
+                <p class="subtitle">
+                    Security profile for this device including trust status, open ports,
+                    threat alerts, risk score, and simple security recommendations.
+                </p>
+
+                <a class="primary-btn" href="{{ url_for('home') }}">
+                    Back to Dashboard
+                </a>
+            </div>
+
+            <div class="hero-risk">
+                <p>Device Risk</p>
+
+                {% if device_risk_score >= 85 %}
+                    <h2 class="risk-low">{{ device_risk_score }}/100</h2>
+                    <span class="status-good">Healthy</span>
+                {% elif device_risk_score >= 60 %}
+                    <h2 class="risk-medium">{{ device_risk_score }}/100</h2>
+                    <span class="status-warning">Needs Review</span>
+                {% else %}
+                    <h2 class="risk-high">{{ device_risk_score }}/100</h2>
+                    <span class="status-danger">High Risk</span>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="stats">
+            <div class="stat-box"><p>Device Type</p><h3>{{ device.type }}</h3></div>
+            <div class="stat-box"><p>Status</p><h3>{{ device.connection_status }}</h3></div>
+            <div class="stat-box"><p>Trust Status</p><h3>{{ device.trust_status }}</h3></div>
+            <div class="stat-box"><p>Open Ports</p><h3>{{ device_vulnerabilities|length }}</h3></div>
+            <div class="stat-box"><p>Threats</p><h3>{{ device_threats|length }}</h3></div>
+            <div class="stat-box"><p>Device Risk</p><h3>{{ device_risk_score }}/100</h3></div>
+        </section>
+
+        <section class="dashboard-grid">
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📡 Device Information</h2>
+                    <span>Identity and connection details</span>
+                </div>
+
+                <div class="clean-row"><div><strong>Name</strong><p>{{ device.name }}</p></div></div>
+                <div class="clean-row"><div><strong>IP Address</strong><p>{{ device.ip }}</p></div></div>
+                <div class="clean-row"><div><strong>MAC Address</strong><p>{{ device.mac }}</p></div></div>
+                <div class="clean-row"><div><strong>Device Type</strong><p>{{ device.type }}</p></div></div>
+                <div class="clean-row"><div><strong>Status</strong><p>{{ device.connection_status }}</p></div></div>
+                <div class="clean-row"><div><strong>Trust Status</strong><p>{{ device.trust_status }}</p></div></div>
+                <div class="clean-row"><div><strong>Last Seen</strong><p>{{ device.last_seen }}</p></div></div>
+
+                <br>
+
+                {% if device.trusted %}
+                    <a class="primary-btn" href="{{ url_for('untrust_device', mac_address=device.mac) }}">
+                        Mark Unknown
+                    </a>
+                {% else %}
+                    <a class="primary-btn" href="{{ url_for('trust_device', mac_address=device.mac) }}">
+                        Mark Trusted
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🧠 AI Recommendation</h2>
+                    <span>Simple action guidance</span>
+                </div>
+
+                <p class="panel-note">
+                    {{ device_recommendation }}
+                </p>
+            </div>
+
+        </section>
+
+        <section class="dashboard-grid">
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🛡️ Open Ports</h2>
+                    <span>{{ device_vulnerabilities|length }} finding(s)</span>
+                </div>
+
+                {% if device_vulnerabilities %}
+                    {% for vuln in device_vulnerabilities %}
+                        <div class="clean-row">
+                            <div>
+                                <strong>Port {{ vuln.port }}</strong>
+                                <p>IP: {{ vuln.ip }}</p>
+                                <small>MAC: {{ vuln.mac }} · Detected: {{ vuln.time }}</small>
+                            </div>
+
+                            <button
+                                class="risk-pill risk-{{ vuln.risk_level|lower }}-pill open-port-ai-btn"
+                                data-ip="{{ vuln.ip|e }}"
+                                data-port="{{ vuln.port|e }}"
+                                data-risk="{{ vuln.risk_level|e }}">
+                                {{ vuln.risk_level }}
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty">No open ports found for this device.</p>
+                {% endif %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>⚠️ Threat Alerts</h2>
+                    <span>{{ device_threats|length }} alert(s)</span>
+                </div>
+
+                {% if device_threats %}
+                    {% for threat in device_threats %}
+                        <div class="clean-row">
+                            <div>
+                                <strong>{{ threat.type }}</strong>
+                                <p>IP: {{ threat.ip }}</p>
+                                <small>{{ threat.explanation }}</small>
+                                <span class="time">Detected: {{ threat.time }}</span>
+                            </div>
+
+                            <button
+                                class="risk-pill risk-{{ threat.level|lower }}-pill explain-threat-btn"
+                                data-threat-type="{{ threat.type|e }}"
+                                data-threat-ip="{{ threat.ip|e }}"
+                                data-threat-time="{{ threat.time|e }}"
+                                data-threat-level="{{ threat.level|e }}"
+                                data-threat-explanation="{{ threat.explanation|e }}">
+                                {{ threat.level }}
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty">No threat alerts linked to this device.</p>
+                {% endif %}
+            </div>
+
+        </section>
+
+        <footer>
+            Torpedo'sHome AI · Device Security Profile
+        </footer>
+
+    </main>
+
+    <div id="threatExplainModal" class="chat-modal">
+        <div class="chat-box">
+            <div class="chat-header">
+                <h3>⚠️ Threat Explanation</h3>
+                <button id="closeThreatExplainBtn">×</button>
+            </div>
+
+            <div class="chat-context">
+                <p><strong>Alert:</strong> <span id="explainThreatType"></span></p>
+                <p><strong>IP:</strong> <span id="explainThreatIp"></span></p>
+                <p><strong>Level:</strong> <span id="explainThreatLevel"></span></p>
+                <p><strong>Detected:</strong> <span id="explainThreatTime"></span></p>
+            </div>
+
+            <div class="threat-explanation-box" id="plainThreatExplanation"></div>
+        </div>
+    </div>
+
+    <div id="aiChatModal" class="chat-modal">
+        <div class="chat-box">
+            <div class="chat-header">
+                <h3>🤖 AI Port Assistant</h3>
+                <button id="closeChatBtn">×</button>
+            </div>
+
+            <div class="chat-context">
+                <p><strong>Device IP:</strong> <span id="chatIp"></span></p>
+                <p><strong>Open Port:</strong> <span id="chatPort"></span></p>
+                <p><strong>Risk:</strong> <span id="chatRisk"></span></p>
+            </div>
+
+            <div id="chatMessages" class="chat-messages">
+                <div class="bot-message">Ask me anything about this open port.</div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="chatQuestion" placeholder="Ask about this port...">
+                <button id="sendQuestionBtn">Ask</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedIp = "";
+        let selectedPort = "";
+        let selectedRisk = "";
+
+        const threatExplainModal = document.getElementById("threatExplainModal");
+        const closeThreatExplainBtn = document.getElementById("closeThreatExplainBtn");
+
+        const explainThreatType = document.getElementById("explainThreatType");
+        const explainThreatIp = document.getElementById("explainThreatIp");
+        const explainThreatLevel = document.getElementById("explainThreatLevel");
+        const explainThreatTime = document.getElementById("explainThreatTime");
+        const plainThreatExplanation = document.getElementById("plainThreatExplanation");
+
+        const aiChatModal = document.getElementById("aiChatModal");
+        const closeChatBtn = document.getElementById("closeChatBtn");
+        const chatIp = document.getElementById("chatIp");
+        const chatPort = document.getElementById("chatPort");
+        const chatRisk = document.getElementById("chatRisk");
+        const chatMessages = document.getElementById("chatMessages");
+        const chatQuestion = document.getElementById("chatQuestion");
+        const sendQuestionBtn = document.getElementById("sendQuestionBtn");
+
+        document.querySelectorAll(".explain-threat-btn").forEach(function(button) {
+            button.addEventListener("click", function() {
+                explainThreatType.textContent = button.dataset.threatType;
+                explainThreatIp.textContent = button.dataset.threatIp;
+                explainThreatLevel.textContent = button.dataset.threatLevel;
+                explainThreatTime.textContent = button.dataset.threatTime;
+                plainThreatExplanation.textContent = button.dataset.threatExplanation;
+
+                threatExplainModal.style.display = "flex";
+            });
+        });
+
+        closeThreatExplainBtn.addEventListener("click", function() {
+            threatExplainModal.style.display = "none";
+        });
+
+        document.querySelectorAll(".open-port-ai-btn").forEach(function(button) {
+            button.addEventListener("click", function() {
+                selectedIp = button.dataset.ip;
+                selectedPort = button.dataset.port;
+                selectedRisk = button.dataset.risk;
+
+                chatIp.textContent = selectedIp;
+                chatPort.textContent = selectedPort;
+                chatRisk.textContent = selectedRisk;
+
+                chatMessages.innerHTML = "";
+                addChatMessage(
+                    "This port is open on this device. Ask what it means, why it is risky, or how to secure it.",
+                    "bot-message"
+                );
+
+                aiChatModal.style.display = "flex";
+                chatQuestion.focus();
+            });
+        });
+
+        closeChatBtn.addEventListener("click", function() {
+            aiChatModal.style.display = "none";
+        });
+
+        function addChatMessage(message, type, id = "") {
+            const messageElement = document.createElement("div");
+            messageElement.className = type;
+
+            if (id) {
+                messageElement.id = id;
+            }
+
+            messageElement.textContent = message;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeLoadingMessage() {
+            const loadingMessage = document.getElementById("loadingMessage");
+
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        function sendQuestion() {
+            const question = chatQuestion.value.trim();
+
+            if (question === "") return;
+
+            addChatMessage(question, "user-message");
+            chatQuestion.value = "";
+
+            addChatMessage("Thinking...", "bot-message", "loadingMessage");
+
+            fetch("/ask-vulnerability", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    ip: selectedIp,
+                    port: selectedPort,
+                    risk_level: selectedRisk,
+                    question: question
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                removeLoadingMessage();
+                addChatMessage(data.answer, "bot-message");
+            })
+            .catch(function() {
+                removeLoadingMessage();
+                addChatMessage("AI assistant is not available right now. Make sure Ollama is running.", "bot-message");
+            });
+        }
+
+        sendQuestionBtn.addEventListener("click", sendQuestion);
+
+        chatQuestion.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendQuestion();
+            }
+        });
+
+        window.addEventListener("click", function(event) {
+            if (event.target === threatExplainModal) {
+                threatExplainModal.style.display = "none";
+            }
+
+            if (event.target === aiChatModal) {
+                aiChatModal.style.display = "none";
+            }
+        });
+    </script>
+
+</body>
+</html>

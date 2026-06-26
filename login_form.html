@@ -1,0 +1,21 @@
+<form action="check.jst" method="post" id="pageForm"  onsubmit="return f();">
+	<div class="form-row">
+		<p id="index_helptext">Please login to view and manage your Gateway settings.</p>
+	</div>
+	<div>
+		<table style="background:white; text-align:center;">
+			<tr>
+				<td><label for="username"><b><div id="username_label">Username:</div></b></label></td>
+				<td><input type="text"     id="username" name="username" style="width: 250px;" class="text" autocomplete="off" /></td>
+			</tr>
+			<tr>
+				<td><label for="password"><b>Password:</b></label></td>
+				<td><input type="password" id="password" name="password" style="width: 250px;" class="text" autocomplete="off" /></td>
+			</tr>
+		</table>
+	</div>
+	<div class="form-btn"  style="margin-top: 25px;text-align:center;">
+		<input type="submit" class="btn" value="Login" />
+	</div>
+<input type="hidden" name="locale" id="locale" value="false">
+</form>

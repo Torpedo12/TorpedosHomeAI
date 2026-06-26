@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torpedo'sHome AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    {% set trusted_count = trusted_devices|length %}
+    {% set unknown_count = unknown_devices|length %}
+    {% set threat_count = threats|length %}
+    {% set vulnerability_count = vulnerabilities|length %}
+    {% set offline_count = offline_devices|length %}
+
+    <main class="page">
+
+        <section class="hero">
+            <div>
+                <div class="badge">
+                    <span class="pulse"></span>
+                    AI Security Monitor Online
+                </div>
+
+                <h1>Torpedo's<span>Home AI</span></h1>
+
+                <p class="subtitle">
+                    Home network security dashboard for router-based device discovery,
+                    unknown device alerts, open port detection, IDS monitoring, risk scoring,
+                    and AI-powered security reports.
+                </p>
+
+                <p id="clock"></p>
+            </div>
+
+            <div class="hero-risk">
+                <p>Current Network Risk</p>
+
+                {% if risk_score >= 85 %}
+                    <h2 class="risk-low">{{ risk_score }}/100</h2>
+                    <span class="status-good">Healthy</span>
+                {% elif risk_score >= 60 %}
+                    <h2 class="risk-medium">{{ risk_score }}/100</h2>
+                    <span class="status-warning">Needs Review</span>
+                {% else %}
+                    <h2 class="risk-high">{{ risk_score }}/100</h2>
+                    <span class="status-danger">High Risk</span>
+                {% endif %}
+
+                <a class="primary-btn" href="/download-ai-report">
+                    Generate AI Report
+                </a>
+            </div>
+        </section>
+
+        <section class="stats">
+            <a class="stat-box stat-link" href="{{ url_for('connected_devices_page') }}">
+                <p>Connected</p>
+                <h3>{{ devices|length }}</h3>
+            </a>
+
+            <a class="stat-box stat-link" href="{{ url_for('trusted_devices_page') }}">
+                <p>Trusted</p>
+                <h3>{{ trusted_count }}</h3>
+            </a>
+
+            <a class="stat-box stat-link" href="{{ url_for('unknown_devices_page') }}">
+                <p>Unknown</p>
+                <h3>{{ unknown_count }}</h3>
+            </a>
+
+            <a class="stat-box stat-link" href="{{ url_for('threat_alerts_page') }}">
+                <p>Threats</p>
+                <h3>{{ threat_count }}</h3>
+            </a>
+
+            <a class="stat-box stat-link" href="{{ url_for('offline_devices_page') }}">
+                <p>Offline</p>
+                <h3>{{ offline_count }}</h3>
+            </a>
+
+            <a class="stat-box stat-link" href="{{ url_for('open_ports_page') }}">
+                <p>Open Ports</p>
+                <h3>{{ vulnerability_count }}</h3>
+            </a>
+        </section>
+
+        <section class="dashboard-grid">
+
+            <div class="panel large-panel">
+                <div class="panel-header">
+                    <h2>🌐 Network Map</h2>
+                    <span>Rogers Gateway · 10.0.0.1</span>
+                </div>
+
+                <div class="router-node">
+                    Rogers Gateway
+                    <span>10.0.0.1</span>
+                </div>
+
+                <div class="network-map-columns">
+                    <div class="network-device-section">
+                        <h3>Connected Devices</h3>
+
+                        {% if devices %}
+                            {% for device in devices %}
+                                <a class="device-chip online-chip"
+                                   href="{{ url_for('device_details', mac_address=device.mac) }}">
+                                    {{ device.name }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty">No connected devices found.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="network-device-section">
+                        <h3>Offline Devices</h3>
+
+                        {% if offline_devices %}
+                            {% for device in offline_devices %}
+                                <a class="device-chip offline-chip"
+                                   href="{{ url_for('device_details', mac_address=device.mac) }}">
+                                    {{ device.name }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty">No offline devices found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📈 Risk Trend</h2>
+                    <span>Last 60 minutes</span>
+                </div>
+
+                <p class="panel-note">
+                    Tracks risk changes caused by unknown devices, IDS alerts, and open ports.
+                </p>
+
+                <div class="chart-wrapper">
+                    <canvas id="riskTrendChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <section class="dashboard-grid">
+
+            <div class="panel large-panel">
+                <div class="panel-header">
+                    <h2>🚨 Devices Requiring Attention</h2>
+                    <span>Unknown devices and risky findings</span>
+                </div>
+
+                <div class="network-device-section full-list-section">
+
+                    {% if unknown_devices %}
+                        {% for device in unknown_devices %}
+                            <a class="device-chip danger-chip"
+                               href="{{ url_for('device_details', mac_address=device.mac) }}">
+                                {{ device.name }}
+                                <small>Unknown device · {{ device.ip }}</small>
+                            </a>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if vulnerabilities %}
+                        {% set ns = namespace(seen=[]) %}
+
+                        {% for vuln in vulnerabilities %}
+                            {% set device_key = vuln.mac if vuln.mac and vuln.mac != "Unknown" else vuln.ip %}
+
+                            {% if device_key not in ns.seen %}
+                                {% set _ = ns.seen.append(device_key) %}
+
+                                {% if vuln.mac and vuln.mac != "Unknown" %}
+                                    <a class="device-chip warning-chip"
+                                       href="{{ url_for('device_details', mac_address=vuln.mac) }}">
+                                        {{ vuln.device_name }}
+
+                                        <small>
+                                            Open Ports:
+                                            {% set port_ns = namespace(first=True) %}
+                                            {% for port_item in vulnerabilities %}
+                                                {% if port_item.mac == vuln.mac %}
+                                                    {% if not port_ns.first %}, {% endif %}
+                                                    {{ port_item.port }} {{ port_item.risk_level }}
+                                                    {% set port_ns.first = False %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </a>
+                                {% else %}
+                                    <div class="device-chip warning-chip">
+                                        {{ vuln.device_name }}
+
+                                        <small>
+                                            Open Ports:
+                                            {% set port_ns = namespace(first=True) %}
+                                            {% for port_item in vulnerabilities %}
+                                                {% if port_item.ip == vuln.ip %}
+                                                    {% if not port_ns.first %}, {% endif %}
+                                                    {{ port_item.port }} {{ port_item.risk_level }}
+                                                    {% set port_ns.first = False %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if not unknown_devices and not vulnerabilities %}
+                        <p class="empty">No devices require attention right now.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <div class="panel large-panel">
+                <div class="panel-header">
+                    <h2>🟢 Trusted Devices</h2>
+                    <span>Recognized safe devices</span>
+                </div>
+
+                <div class="network-device-section full-list-section">
+
+                    {% if trusted_devices %}
+                        {% for device in trusted_devices %}
+                            <a class="device-chip online-chip"
+                               href="{{ url_for('device_details', mac_address=device.mac) }}">
+                                {{ device.name }}
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty">No trusted devices yet.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </section>
+
+        <footer>
+            Torpedo'sHome AI · Home Network Security Dashboard
+        </footer>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
